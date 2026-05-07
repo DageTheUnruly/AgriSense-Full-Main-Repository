@@ -193,6 +193,14 @@
   }
 }
 
+.dashboard-page {
+    min-height: 100vh;
+    display: block; /* Ensure it's not a collapsed flexbox */
+    color: rgb(15, 13, 13); /* Or whatever color contrasts your background */
+    z-index: 1;
+    position: relative;
+}
+
 
 
 .dismiss-btn:hover { background: #504c4c; }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // useEffect for API lifecycle
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusCard from '../components/StatusCard.jsx';
 import AlertItem from '../components/AlertItem.jsx';
@@ -8,21 +8,44 @@ const Dashboard = () => {
   const navigate = useNavigate();
   
   const [isSystemActive, setIsSystemActive] = useState(true);
-  const [sensors, setSensors] = useState([]); // Start empty to wait for DB
+  const [sensors, setSensors] = useState([]); 
   const [alerts, setAlerts] = useState(initialAlerts);
 
-  // Task 3 - Fetching Real Data - (Para di na salig sa mockdata)
+  // --- TASK: LOGOUT LOGIC ---
+  const handleLogout = () => {
+    localStorage.removeItem('token'); // Clear the session
+    navigate('/'); // Kick back to login
+  };
+
+  // --- TASK: FETCH REAL DATA ---
   useEffect(() => {
-    fetch("http://127.0.0.1:8000/api/sensors/") 
-      .then(res => res.json())
-      .then(data => {
-        setSensors(data); //Overwrites mock data with MySQL data
-      })
-      .catch(err => console.error("Fetch error:", err));
+    const fetchData = async () => {
+      const token = localStorage.getItem('token'); 
+      
+      try {
+        const response = await fetch('http://127.0.0.1:8000/api/sensors/', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setSensors(data);
+        } else {
+          console.error("Dashboard failed to get data. Status:", response.status);
+        }
+      } catch (error) {
+        console.error("Connection error:", error);
+      }
+    };
+
+    fetchData();
   }, []);
 
   const handleTogglePower = (id) => {
-    // Task 4 - Eventually needs a PATCH request to save state
     setSensors(prev => prev.map(s => s.id === id ? { ...s, power: !s.power } : s));
   };
 
@@ -31,23 +54,75 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="dashboard-page">
-      <header className="dashboard-header">
-        <h1>AgriSense Dashboard</h1>
-        <button onClick={() => navigate('/')}>Logout</button>
+    <div className="dashboard-page" style={{ 
+      backgroundColor: "#16171D", 
+      minHeight: "100vh", 
+      padding: "20px",
+      fontFamily: "'Inter', sans-serif",
+      boxSizing: "border-box"
+    }}>
+      {/* HEADER AREA */}
+      <header style={{ 
+        display: "flex", 
+        justifyContent: "space-between", 
+        alignItems: "center", 
+        marginBottom: "30px",
+        paddingBottom: "10px",
+        borderBottom: "1px solid rgba(255,255,255,0.2)"
+      }}>
+        <h1 style={{ color: "white", fontSize: "1.5rem", margin: 0 }}>AgriSense Dashboard</h1>
+        <button 
+          onClick={handleLogout}
+          style={{ 
+            backgroundColor: "#f0f0f0", 
+            border: "none", 
+            padding: "8px 15px", 
+            borderRadius: "8px", 
+            fontWeight: "bold",
+            cursor: "pointer",
+            color: "#333"
+          }}
+        >
+          Logout
+        </button>
       </header>
 
-      <section className="system-banner">
-        <p>System Gateway: <strong>{isSystemActive ? "ONLINE" : "OFFLINE"}</strong></p>
-        <button onClick={() => setIsSystemActive(!isSystemActive)}>
-          {isSystemActive ? "Deactivate" : "Activate"}
+      {/* SYSTEM STATUS BANNER */}
+      <section style={{ 
+        background: "rgba(255, 255, 255, 0.2)", 
+        backdropFilter: "blur(10px)",
+        padding: "20px", 
+        borderRadius: "15px", 
+        marginBottom: "25px", 
+        color: "white",
+        border: "1px solid rgba(255,255,255,0.3)"
+      }}>
+        <p style={{ margin: "0 0 10px 0", fontSize: "1.1rem" }}>
+          System Gateway: <span style={{ fontWeight: "bold", color: isSystemActive ? "#afffba" : "#ffbaba" }}>
+            {isSystemActive ? "● ONLINE" : "● OFFLINE"}
+          </span>
+        </p>
+        <button 
+          onClick={() => setIsSystemActive(!isSystemActive)}
+          style={{ 
+            width: "100%", 
+            padding: "10px", 
+            borderRadius: "10px", 
+            border: "none", 
+            backgroundColor: "white", 
+            color: "#181b18", 
+            fontWeight: "bold",
+            cursor: "pointer"
+          }}
+        >
+          {isSystemActive ? "Deactivate System" : "Activate System"}
         </button>
       </section>
 
+      {/* METRICS GRID */}
       <div className="metrics-grid">
-        {/* [Highlight: Map real DB sensors to UI cards] */}
         {sensors.length === 0 ? (
-          <p>Connecting to AgriSense Network...</p> 
+          <p style={{ color: "white", textAlign: "center", gridColumn: "1/-1" }}>Scanning for sensors...</p> 
         ) : (
           sensors.map(s => (
             <StatusCard key={s.id} {...s} onToggle={() => handleTogglePower(s.id)} />
@@ -55,11 +130,14 @@ const Dashboard = () => {
         )}
       </div>
 
-      <section className="alerts-section">
-        <h3>System Notifications ({alerts.length})</h3>
-        {alerts.map(a => (
-          <AlertItem key={a.id} {...a} onDismiss={handleDismiss} />
-        ))}
+      {/* ALERTS SECTION */}
+      <section style={{ marginTop: "40px" }}>
+        <h3 style={{ color: "white", marginBottom: "15px" }}>Notifications ({alerts.length})</h3>
+        <div className="alerts-list">
+          {alerts.map(a => (
+            <AlertItem key={a.id} {...a} onDismiss={handleDismiss} />
+          ))}
+        </div>
       </section>
     </div>
   );

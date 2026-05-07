@@ -1,28 +1,47 @@
-import React from 'react';
-import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
-
-// Screens from your src folder
-import LoginScreen from './src/screens/LoginScreen'; 
-import DashboardScreen from './src/screens/DashBoardScreen';
-
-const Stack = createStackNavigator();
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, FlatList, ActivityIndicator } from 'react-native';
 
 export default function App() {
+  const [sensors, setSensors] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // actual IP from ipconfig
+  const API_URL = "http://YOUR_LAPTOP_IP:8000/api/sensors/";
+
+  useEffect(() => {
+    fetch(API_URL)
+      .then((response) => response.json())
+      .then((data) => {
+        setSensors(data);
+        setLoading(false);
+      })
+      .catch((error) => console.error(error));
+  }, []);
+
+  if (loading) return <ActivityIndicator size="large" color="#00ff00" style={styles.center} />;
+
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
-        <Stack.Screen 
-          name="Login" 
-          component={LoginScreen} 
-          options={{ headerShown: false }} 
-        />
-        <Stack.Screen 
-          name="Dashboard" 
-          component={DashboardScreen} 
-          options={{ title: 'AgriSense Dashboard' }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <View style={styles.container}>
+      <Text style={styles.title}>AgriSense Mobile</Text>
+      <FlatList
+        data={sensors}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            <Text style={styles.label}>{item.label}</Text>
+            <Text style={styles.value}>{item.value} {item.unit}</Text>
+          </View>
+        )}
+      />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: { flex: 1, paddingTop: 50, backgroundColor: '#f5f5f5', alignItems: 'center' },
+  title: { fontSize: 24, fontWeight: 'bold', marginBottom: 20, color: '#2e7d32' },
+  card: { backgroundColor: '#fff', padding: 20, marginVertical: 8, width: '90%', borderRadius: 10, elevation: 3 },
+  label: { fontSize: 16, color: '#555' },
+  value: { fontSize: 22, fontWeight: 'bold', color: '#000' },
+  center: { flex: 1, justifyContent: 'center' }
+});
